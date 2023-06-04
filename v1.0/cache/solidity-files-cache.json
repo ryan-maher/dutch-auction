@@ -1,0 +1,83 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/ryan/INFO7500/DutchAuction/v1.0/contracts/BasicDutchAuction.sol": {
+      "lastModificationDate": 1685903839419,
+      "contentHash": "6852dcddbf08f06159820730b29b70d5",
+      "sourceName": "contracts/BasicDutchAuction.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          },
+          "metadata": {
+            "useLiteralContent": false
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.10"
+      ],
+      "artifacts": [
+        "BasicDutchAuction"
+      ]
+    },
+    "/home/ryan/INFO7500/DutchAuction/v1.0/contracts/test.sol": {
+      "lastModificationDate": 1685902764449,
+      "contentHash": "2fb4ffb1d25ff2c419f71e5590249c41",
+      "sourceName": "contracts/test.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          },
+          "metadata": {
+            "useLiteralContent": false
+          }
+        }
+      },
+      "imports": [
+        "./BasicDutchAuction.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.10"
+      ],
+      "artifacts": [
+        "test"
+      ]
+    }
+  }
+}
