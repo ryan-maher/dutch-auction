@@ -3,6 +3,8 @@
 pragma solidity ^0.8.10;
 
 import "./BasicDutchAuction.sol";
+
+// contract for testing require @ line 49 of BasicDutchAuction.sol 
 contract test {
 
     BasicDutchAuction testContract;

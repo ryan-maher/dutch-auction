@@ -47,7 +47,6 @@ contract BasicDutchAuction {
         // Send wei to owner (seller)
         (bool success, ) = owner.call{value: msg.value}("");
         require(success, "transfer failed");
-        //receiveMoney();
 
         // Close auction
         acceptingBids = false;
@@ -56,12 +55,5 @@ contract BasicDutchAuction {
         return msg.sender;
     
     }
-
-    // Called by bid() function with bid value from bidder
-    // function receiveMoney() public payable {
-    //     // Send wei to owner (seller)
-    //     (bool success, ) = owner.call{value: msg.value}("");
-    //     require(success, "transfer failed");
-    // }
 
 }

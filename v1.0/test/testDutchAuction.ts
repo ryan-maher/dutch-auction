@@ -17,6 +17,7 @@ describe("Test Cases", function() {
     
     it("Owner of the contract should be the seller", async function () {
         
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         // Getting signers of contract
@@ -27,11 +28,13 @@ describe("Test Cases", function() {
         // console.log("   contract owner variable: " + await (basicDutchAuction.owner()));
         
         // Checks if owner and signer match
-        expect(await basicDutchAuction.owner()).to.equal(signers[0].address)
+        expect(await basicDutchAuction.owner()).to.equal(signers[0].address);
+
     });
 
     it("Auction begins at the block in which the contract is created", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         const blockNumber = await time.latestBlock();
@@ -40,12 +43,14 @@ describe("Test Cases", function() {
         // console.log("Current block number: " + blockNumber);
         // console.log("Contract block: " + contractBlock);
 
+        // Compare current block number to starting block of contract
         expect(blockNumber == contractBlock);
 
     });
 
     it("Contract rejects bid below current price", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         const override = {value: 1100}
@@ -57,6 +62,7 @@ describe("Test Cases", function() {
 
     it("Bid fails when placed after auction block window has closed", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         const override = {value: 1500}
@@ -71,6 +77,7 @@ describe("Test Cases", function() {
     
     it("Contract accepts bid at last block of auction", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         // Mines _numBlocksAuctionOpen blocks
@@ -78,7 +85,7 @@ describe("Test Cases", function() {
 
         // initialPrice = _reservePrice + (_numBlocksAuctionOpen * _offerPriceDecrement);
         // For this set of tests, initialPrice is calculated to be 1200 (1000 + (20 * 10))
-
+        //
         // currentPrice = initialPrice - ((block.number - startingBlock) * offerPriceDecrement);
         // currentPrice = 1200 - ((20 - 1) * 10) = 1000
         
@@ -91,6 +98,7 @@ describe("Test Cases", function() {
 
     it("Contract accepts valid bid", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
         
         // console.log("   Accepting bids: " + await basicDutchAuction.acceptingBids());
@@ -99,11 +107,14 @@ describe("Test Cases", function() {
         
         // console.log(await basicDutchAuction.bid(override));
 
+        // Check if bid is accepted
         expect(await basicDutchAuction.bid(override));
+
     })
 
     it("Contract rejects bid after valid bid already placed", async function () {
 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
 
         const override = {value: 1500}
@@ -125,7 +136,7 @@ describe("Test Cases", function() {
 
         // initialPrice = _reservePrice + (_numBlocksAuctionOpen * _offerPriceDecrement);
         // For this set of tests, initialPrice is calculated to be 1200 (1000 + (20 * 10))
-
+        //
         // currentPrice = initialPrice - ((block.number - startingBlock) * offerPriceDecrement);
         // currentPrice = 1200 - ((11 - 1) * 10) = 1100
         
@@ -138,6 +149,7 @@ describe("Test Cases", function() {
 
     it("Seller receives wei from first valid bid", async function () { 
                 
+        // Loading fixture
         const {basicDutchAuction} = await loadFixture(deployContract);
         
         // Getting address of signers to use an account different than owner to place bid
@@ -175,8 +187,6 @@ describe("Test Cases", function() {
     // Code provided by TA
     it("Reverts if ether transfer to the owner fails", async function () {
         
-        //const {basicDutchAuction} = await loadFixture(deployContract);
-        
         const [owner, bidder] = await ethers.getSigners();
         
         const bigNum = BigInt("6000000000000000000");
@@ -186,8 +196,8 @@ describe("Test Cases", function() {
         await testHelper.deployed();
         
         await expect(
-          testHelper.connect(bidder).targetTest({value: bigNum})
-        ).to.be.revertedWith("transfer failed");
+            testHelper.connect(bidder).targetTest({value: bigNum})
+            ).to.be.revertedWith("transfer failed");
       
     });
 

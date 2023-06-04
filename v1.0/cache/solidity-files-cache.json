@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/ryan/INFO7500/DutchAuction/v1.0/contracts/BasicDutchAuction.sol": {
-      "lastModificationDate": 1685903839419,
-      "contentHash": "6852dcddbf08f06159820730b29b70d5",
+      "lastModificationDate": 1685905293348,
+      "contentHash": "e681ef030719789369c30b010a0b9f11",
       "sourceName": "contracts/BasicDutchAuction.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -40,8 +40,8 @@
       ]
     },
     "/home/ryan/INFO7500/DutchAuction/v1.0/contracts/test.sol": {
-      "lastModificationDate": 1685902764449,
-      "contentHash": "2fb4ffb1d25ff2c419f71e5590249c41",
+      "lastModificationDate": 1685905300298,
+      "contentHash": "714328b58809fa73a52c2cf2ef2cbffe",
       "sourceName": "contracts/test.sol",
       "solcConfig": {
         "version": "0.8.18",
