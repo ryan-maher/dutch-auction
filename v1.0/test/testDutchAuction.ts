@@ -75,17 +75,20 @@ describe("Tests:", function() {
 
     describe("Contract", function() {
     
-        it("Contract sets correct current price", async function () {
+        it("Contract sets correct initial price", async function () {
     
             // Loading fixture
             const {basicDutchAuction} = await loadFixture(deployContract);
 
             const price = 1200;
+
+            // Get initialPrice from contract
             var initPrice = (await basicDutchAuction.initialPrice()).toNumber();
 
             // console.log(initPrice);
             // console.log(price);
 
+            // Compare initialPrice with expected price
             expect(initPrice).to.equal(price);
     
         });
