@@ -62,12 +62,12 @@ describe("Tests:", function() {
     
             var ownerBalanceDifference = ownerFinalBalance.toBigInt() - ownerInitialBalance.toBigInt();
     
-            // console.log("Owner final balance: " + ownerFinalBalance);
+            // console.log("Owner final balance:   " + ownerFinalBalance);
             // console.log("Bidder final balance: " + bidderFinalBalance);
             // console.log("Owner balance difference: " + ownerBalanceDifference);
     
             // Check if owner balance increased by bid amount
-            expect(ownerBalanceDifference == 1500n);
+            expect(ownerBalanceDifference).to.equal(1500n);
             
         });
 
@@ -75,6 +75,21 @@ describe("Tests:", function() {
 
     describe("Contract", function() {
     
+        it("Contract sets correct current price", async function () {
+    
+            // Loading fixture
+            const {basicDutchAuction} = await loadFixture(deployContract);
+
+            const price = 1200;
+            var initPrice = (await basicDutchAuction.initialPrice()).toNumber();
+
+            // console.log(initPrice);
+            // console.log(price);
+
+            expect(initPrice).to.equal(price);
+    
+        });
+        
         it("Contract accepts valid bid", async function () {
     
             // Loading fixture
@@ -149,12 +164,12 @@ describe("Tests:", function() {
 
             // Get contract starting block number
             const contractBlock = (await (basicDutchAuction.startingBlock())).toNumber();
-
+            
             // console.log("Current block number: " + blockNumber);
             // console.log("Contract block: " + contractBlock);
 
             // Compare current block number to starting block of contract
-            expect(blockNumber == contractBlock);
+            expect(contractBlock).to.equal(blockNumber);
 
         });
 
