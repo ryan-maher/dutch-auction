@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { time, loadFixture, mine, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { time, loadFixture, mine} from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
 
 describe("Tests:", function() {
@@ -7,12 +7,29 @@ describe("Tests:", function() {
     // Saving fixture to load for each test
     async function deployContract(){
 
-        // Deploying contract
+        // Get and Deploy contract
         const DutchAuction = await ethers.getContractFactory("BasicDutchAuction");
         const basicDutchAuction = await DutchAuction.deploy(1000, 20, 10); 
         await basicDutchAuction.deployed();
         
         return {basicDutchAuction};
+
+    }
+
+    async function deployLateContract(){
+
+        // Get contract
+        const DutchAuction = await ethers.getContractFactory("BasicDutchAuction");
+        
+        // Mine 10 blocks before deploying
+        await mine(10);
+        
+        // Deploy contract
+        const basicDutchAuction = await DutchAuction.deploy(1000, 20, 10); 
+        await basicDutchAuction.deployed();
+        
+        return {basicDutchAuction};
+
     }
 
     describe("Owner", function() {
@@ -160,13 +177,13 @@ describe("Tests:", function() {
         it("Auction begins at the block in which the contract is created", async function () {
 
             // Loading fixture
-            const {basicDutchAuction} = await loadFixture(deployContract);
+            var {basicDutchAuction} = await loadFixture(deployContract);
 
             // Get current block number
-            const blockNumber = await time.latestBlock();
+            var blockNumber = await time.latestBlock();
 
             // Get contract starting block number
-            const contractBlock = (await (basicDutchAuction.startingBlock())).toNumber();
+            var contractBlock = (await (basicDutchAuction.startingBlock())).toNumber();
             
             // console.log("Current block number: " + blockNumber);
             // console.log("Contract block: " + contractBlock);
@@ -174,21 +191,19 @@ describe("Tests:", function() {
             // Compare current block number to starting block of contract
             expect(contractBlock).to.equal(blockNumber);
 
-        });
+            // Test again with contract deployed at later block
+            var {basicDutchAuction} = await loadFixture(deployLateContract);
 
-        it("Bid fails when auction block window has ended", async function () {
+            var newcontractBlock = (await basicDutchAuction.startingBlock()).toNumber();
 
-            // Loading fixture
-            const {basicDutchAuction} = await loadFixture(deployContract);
+            var newblockNumber = await time.latestBlock();
 
-            const override = {value: 1500}
+            // console.log("Current block number: " + newblockNumber);
+            // console.log("Contract block: " + newcontractBlock);
 
-            // Mines more blocks than auction is open for (current block becomes 21, auction open for 20)
-            await mine(20);
-            
-            // Check if bid gets reverted
-            await expect(basicDutchAuction.bid(override)).to.be.reverted;
-            
+            // Compare new block number to contract starting block
+            expect(newcontractBlock).to.equal(newblockNumber);
+
         });
 
         it("Contract accepts bid of lower but sufficient value after some time has passed", async function () {
@@ -229,6 +244,21 @@ describe("Tests:", function() {
 
             // Check if bid of lower but sufficient value succeeds after _numBlocksAuctionOpen blocks have been mined
             expect(await basicDutchAuction.bid(override));
+            
+        });
+
+        it("Bid fails when auction block window has ended", async function () {
+
+            // Loading fixture
+            const {basicDutchAuction} = await loadFixture(deployContract);
+
+            const override = {value: 1500}
+
+            // Mines more blocks than auction is open for (current block becomes 21, auction open for 20)
+            await mine(20);
+            
+            // Check if bid gets reverted
+            await expect(basicDutchAuction.bid(override)).to.be.reverted;
             
         });
 
