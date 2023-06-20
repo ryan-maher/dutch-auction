@@ -22,7 +22,7 @@ contract NFT is ERC721, Ownable{
     //     // console.log("[NFTContract] approved by: ", msg.sender);
     // }
 
-    // function safeTransferFrom(address from, address to, uint256 tokenId) public override{
+    // function transferFrom(address from, address to, uint256 tokenId) external {
 
     // }
 

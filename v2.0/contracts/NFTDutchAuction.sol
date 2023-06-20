@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 interface INFT {
         
     function transferFrom(address from, address to, uint256 Id) external;
-    function approve(address to, uint256 tokenId) external;
+
 }
 
 contract NFTDutchAuction {
@@ -42,13 +42,9 @@ contract NFTDutchAuction {
 
     }
 
-    function transferFrom(address _inft, address from, address to, uint256 Id) public {
+    function transferFrom(address _inft, address from, address to, uint256 Id) internal {
         INFT(_inft).transferFrom(from,to,Id);
     }
-
-    // function approve(address _inft, address to, uint256 Id) public {
-    //     INFT(_inft).approve(to, Id);
-    // }
     
     // Called externally by bidder
     function bid() public payable returns(address) {

@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 
 import "./NFTDutchAuction.sol";
 
-// contract for testing require @ line 49 of BasicDutchAuction.sol 
+// contract for testing require @ line 66 of NFTDutchAuction.sol 
 contract test {
 
     NFTDutchAuction testContract;

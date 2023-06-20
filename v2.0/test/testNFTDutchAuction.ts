@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import { time, loadFixture, mine} from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
-import { string } from "hardhat/internal/core/params/argumentTypes";
 
 describe("Tests:", function() {
 
@@ -69,11 +68,12 @@ describe("Tests:", function() {
 
     }
 
-    it("Deploy NFT Contract, Mint, and Transfer", async function () {
+    it("Deployment, Minting, and Transfer succeed", async function () {
         
         // Load NFT contract deployment fixture
         const {NFTContract} = await loadFixture(deployNFTContract);
 
+        // Arbitrary token number
         const tokenid = 32;
 
         // Get signers
@@ -83,13 +83,12 @@ describe("Tests:", function() {
         // console.log("account1: " + account1.address);
         // console.log("account2: " + account2.address);
 
-        // Check balances before minting
+        // Check if accounts are empty before minting
         expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
         expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(0);
         
-        // Mint NFT
-        // Only the deployer of NFT contract can call safeMint
-        const mint = (await NFTContract.safeMint(account1.address, tokenid));
+        // Mint NFT to account1
+        const mint = (await NFTContract.connect(account0).safeMint(account1.address, tokenid));
 
         // console.log("\nMinting");
         // console.log("Minted by: ", mint.from);
@@ -100,21 +99,25 @@ describe("Tests:", function() {
         expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(1);
         expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(0);
 
-        // Deploy auction contract with NFT address and ID 
+        // Deploy auction contract with NFT address and token ID 
         const DutchAuction = await ethers.getContractFactory("NFTDutchAuction");
         const NFTDutchAuction = await DutchAuction.connect(account1).deploy(NFTContract.address, tokenid, 1000, 20, 10); 
         await NFTDutchAuction.deployed();
+        
         // console.log("NFT auction contract deployed to: ", NFTDutchAuction.address);
+        
         const override = {value: 1500}
 
         // console.log("\nApproved by: ", app.from);
         // console.log("Approved address: ", await NFTContract.getApproved(tokenid));
         
-        // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+        // Dutch auction contract address needs to be approved because it calls transferFrom
         const app = await NFTContract.connect(account1).approve(NFTDutchAuction.address, tokenid);
         
-        // place bid
+        // Place bid
+        // bidder is account2
         expect(await NFTDutchAuction.connect(account2).bid(override));
+
         // console.log("\nNFT owner after bid: ", await NFTContract.ownerOf(tokenid));
 
         // Check balances after transfer
@@ -126,10 +129,10 @@ describe("Tests:", function() {
 
     describe("Owner", function() {
     
-        it("Owner of the contract should be the seller", async function () {
+        it("Owner of the contract should be the seller of NFT", async function () {
                 
             // Loading fixture
-            const {NFTContract, NFTDutchAuction} = await loadFixture(deployContractsAndMint);
+            const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
 
             // Getting signers of contract
             const signers = await ethers.getSigners();
@@ -140,6 +143,9 @@ describe("Tests:", function() {
             
             // Checks if owner and signer match
             expect(await NFTDutchAuction.owner()).to.equal(signers[0].address);
+
+            // Checks if owner has NFT
+            expect((await NFTContract.balanceOf(signers[0].address)).toNumber()).to.equal(1);
 
         });
 
@@ -153,7 +159,6 @@ describe("Tests:", function() {
 
             // console.log("Owner address: " + owner.address);
             // console.log("Bidder address:" + bidder.address);
-
             
             // var bidderInitialBalance = await bidder.getBalance();
             
@@ -182,6 +187,38 @@ describe("Tests:", function() {
 
             // Check if owner balance increased by bid amount
             expect(ownerBalanceDifference).to.equal(1500n);
+            
+        });
+
+        it("Winning bidder receives NFT", async function () { 
+                    
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
+            
+            // Getting address of signers to use an account different than owner to place bid
+            const [owner, account1, account2] = await ethers.getSigners();
+
+            // console.log("Owner address: " + owner.address);
+            // console.log("Bidder address:" + bidder.address);
+            
+            // var bidderInitialBalance = await bidder.getBalance();
+            
+            // console.log("Owner initial balance: " + ownerInitialBalance);
+            // console.log("Bidder initial balance: " + bidderInitialBalance);
+            // console.log("\n");
+
+            const override = {value: 1500}
+            
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+            
+            var ownerInitialBalance = await owner.getBalance();
+            
+            // Bidder account places bid
+            await NFTDutchAuction.connect(account2).bid(override);
+
+            // Bidder receives NFT
+            expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(1);
             
         });
 
@@ -287,7 +324,6 @@ describe("Tests:", function() {
 
         });
 
-        // Implement .call fails test here
         it("Contract reverts bid if ether transfer to the owner fails (.call fails)", async function () {
 
             const [account0, account1, account2] = await ethers.getSigners();
@@ -298,11 +334,16 @@ describe("Tests:", function() {
             // Loading fixtures
             const {NFTContract} = await loadFixture(deployNFTContract);
             
+            // Deploy auction contract through intermediary
             const testHelperFactory = await ethers.getContractFactory('test');
             const testHelper = await testHelperFactory.deploy(NFTContract.address, tokenid, 1000, 20, 10);
             await testHelper.deployed();
 
+            // Check if transaction reverts
             await expect(testHelper.connect(account1).targetTest({value: bigNum})).to.be.revertedWith("transfer failed");
+            
+            // Check if NFT was not transferred
+            expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
 
         });
     
