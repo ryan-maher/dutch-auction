@@ -33,7 +33,7 @@ describe("Tests:", function() {
 
         const DutchAuction = await ethers.getContractFactory("NFTDutchAuction");
         const NFTDutchAuction = await DutchAuction.deploy(NFTContract.address, tokenid, 1000, 20, 10);
-        
+
         // console.log("NFT contract deployed by: ", await NFTContract.signer.getAddress());
         // console.log("NFT contract deployed to: ", NFTContract.address);
 
@@ -118,8 +118,6 @@ describe("Tests:", function() {
         // bidder is account2
         expect(await NFTDutchAuction.connect(account2).bid(override));
 
-        // console.log("\nNFT owner after bid: ", await NFTContract.ownerOf(tokenid));
-
         // Check balances after transfer
         expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
         expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(1);
@@ -136,10 +134,6 @@ describe("Tests:", function() {
 
             // Getting signers of contract
             const signers = await ethers.getSigners();
-
-            // Logging signer address and owner address
-            // console.log("   contract signer address: " + await (basicDutchAuction.signer.getAddress()));
-            // console.log("   contract owner variable: " + await (basicDutchAuction.owner()));
             
             // Checks if owner and signer match
             expect(await NFTDutchAuction.owner()).to.equal(signers[0].address);
@@ -156,34 +150,20 @@ describe("Tests:", function() {
             
             // Getting address of signers to use an account different than owner to place bid
             const [owner, account1, account2] = await ethers.getSigners();
-
-            // console.log("Owner address: " + owner.address);
-            // console.log("Bidder address:" + bidder.address);
-            
-            // var bidderInitialBalance = await bidder.getBalance();
-            
-            // console.log("Owner initial balance: " + ownerInitialBalance);
-            // console.log("Bidder initial balance: " + bidderInitialBalance);
-            // console.log("\n");
-
-            const override = {value: 1500}
             
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
             
             var ownerInitialBalance = await owner.getBalance();
             
+            const override = {value: 1500}
+
             // Bidder account places bid
             await NFTDutchAuction.connect(account2).bid(override);
 
             var ownerFinalBalance = (await owner.getBalance());
-            // var bidderFinalBalance = (await bidder.getBalance());
 
             var ownerBalanceDifference = ownerFinalBalance.toBigInt() - ownerInitialBalance.toBigInt();
-
-            // console.log("Owner final balance:   " + ownerFinalBalance);
-            // console.log("Bidder final balance: " + bidderFinalBalance);
-            // console.log("Owner balance difference: " + ownerBalanceDifference);
 
             // Check if owner balance increased by bid amount
             expect(ownerBalanceDifference).to.equal(1500n);
@@ -198,21 +178,13 @@ describe("Tests:", function() {
             // Getting address of signers to use an account different than owner to place bid
             const [owner, account1, account2] = await ethers.getSigners();
 
-            // console.log("Owner address: " + owner.address);
-            // console.log("Bidder address:" + bidder.address);
-            
-            // var bidderInitialBalance = await bidder.getBalance();
-            
-            // console.log("Owner initial balance: " + ownerInitialBalance);
-            // console.log("Bidder initial balance: " + bidderInitialBalance);
-            // console.log("\n");
-
-            const override = {value: 1500}
-            
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
             
-            var ownerInitialBalance = await owner.getBalance();
+            // Check if bidder does not already have NFT
+            expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(0);
+            
+            const override = {value: 1500}
             
             // Bidder account places bid
             await NFTDutchAuction.connect(account2).bid(override);
@@ -236,9 +208,6 @@ describe("Tests:", function() {
             // Get initialPrice from contract
             var initPrice = (await NFTDutchAuction.initialPrice()).toNumber();
 
-            // console.log(initPrice);
-            // console.log(price);
-
             // Compare initialPrice with expected price
             expect(initPrice).to.equal(price);
 
@@ -248,14 +217,11 @@ describe("Tests:", function() {
         
             // Loading fixture
             const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
-            
-            // console.log("   Accepting bids: " + await basicDutchAuction.acceptingBids());
 
-            const override = {value: 1500}
-            
-            // console.log(await basicDutchAuction.bid(override));
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            const override = {value: 1500}
 
             // Check if bid is accepted
             expect(await NFTDutchAuction.bid(override));
@@ -267,10 +233,10 @@ describe("Tests:", function() {
             // Loading fixture
             const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
 
-            const override = {value: 1100}
-
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            const override = {value: 1100}
 
             // Check if insufficient bid gets reverted
             await expect(NFTDutchAuction.bid(override)).to.be.reverted;
@@ -281,11 +247,11 @@ describe("Tests:", function() {
         
             // Loading fixture
             const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
-
-            const override = {value: 1500}
             
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            const override = {value: 1500}
 
             // Make an initial valid bid
             await NFTDutchAuction.bid(override);
@@ -299,8 +265,6 @@ describe("Tests:", function() {
         
             // Loading fixture
             const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
-
-            const override = {value: 1500}
             
             const [owner, account1, account2] = await ethers.getSigners();
 
@@ -361,22 +325,16 @@ describe("Tests:", function() {
 
             // Get contract starting block number
             var contractBlock = (await (NFTDutchAuction.startingBlock())).toNumber();
-            
-            // console.log("Current block number: " + blockNumber);
-            // console.log("Contract block: " + contractBlock);
 
             // Compare current block number to starting block of contract
             expect(contractBlock).to.equal(blockNumber);
 
             // Test again with contract deployed at later block
-            var {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMintLate);
+            var {NFTContract, NFTDutchAuction} = await loadFixture(deployContractsAndMintLate);
 
             var newcontractBlock = (await NFTDutchAuction.startingBlock()).toNumber();
 
             var newblockNumber = await time.latestBlock();
-
-            // console.log("Current block number: " + newblockNumber);
-            // console.log("Contract block: " + newcontractBlock);
 
             // Compare new block number to contract starting block
             expect(newcontractBlock).to.equal(newblockNumber);
@@ -394,8 +352,8 @@ describe("Tests:", function() {
             // initialPrice = _reservePrice + (_numBlocksAuctionOpen * _offerPriceDecrement);
             // For this set of tests, initialPrice is calculated to be 1200 (1000 + (20 * 10))
             //
-            // currentPrice = initialPrice - ((block.number - startingBlock) * offerPriceDecrement);
-            // currentPrice = 1200 - ((11 - 1) * 10) = 1100
+            // currentPrice = initialPrice - (block.number - (startingBlock + 1) * offerPriceDecrement);
+            // currentPrice = 1200 - (16 - (6 - 1)) * 10) = 1100
             
             const override = {value: 1100}
 
@@ -411,23 +369,20 @@ describe("Tests:", function() {
 
             // Loading fixture
             const {NFTContract, NFTDutchAuction, tokenid} = await loadFixture(deployContractsAndMint);
-
+            
             // Mines less blocks than _numBlocksAuctionOpen (set to 20 for these tests)
             await mine(18);
             
             // initialPrice = _reservePrice + (_numBlocksAuctionOpen * _offerPriceDecrement);
             // For this set of tests, initialPrice is calculated to be 1200 (1000 + (20 * 10))
             //
-            // currentPrice = initialPrice - ((block.number - startingBlock) * offerPriceDecrement);
-            // currentPrice = 1200 - ((20 - 1) * 10) = 1000
+            // currentPrice = initialPrice - (block.number - (startingBlock + 1) * offerPriceDecrement);
+            // currentPrice = 1200 - (25 - (6 - 1) * 10) = 1000 (approve function increments latest block by 1)
             
             const override = {value: 1000}
 
             // Dutch auction contract address needs to be approved because it calls safeTransferFrom
             const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
-
-            // console.log(await NFTDutchAuction.startingBlock());
-            // console.log(await time.latestBlock());
 
             // Check if bid of lower but sufficient value succeeds after a few blocks have been mined
             expect(await NFTDutchAuction.bid(override));
