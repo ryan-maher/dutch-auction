@@ -17,13 +17,4 @@ contract NFT is ERC721, Ownable{
         _safeMint(to, tokenId);
     }
 
-    // function approve(address to, uint256 tokenId) public override {
-    //     _approve(to, tokenId);
-    //     // console.log("[NFTContract] approved by: ", msg.sender);
-    // }
-
-    // function transferFrom(address from, address to, uint256 tokenId) external {
-
-    // }
-
 }
