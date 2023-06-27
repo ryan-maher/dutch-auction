@@ -10,7 +10,7 @@ interface InterfaceNFT {
 
 interface InterfaceERC20Token {
     function transfer(address to, uint256 amount) external;
-    function transferFrom(address from, address to, uint256 amount) external;
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
 contract NFTDutchAuction_ERC20Bids{
@@ -56,7 +56,9 @@ contract NFTDutchAuction_ERC20Bids{
 
     function ERC20transferFrom(address _ierc20, address from, address to, uint256 amount) internal returns (bool){
         // InterfaceERC20Token(_ierc20).transferFrom(from, to, amount);
-        console.log("Interface");
+        console.log("Interface, erc20 address: ", _ierc20);
+        console.log("who called this: ", msg.sender);
+        console.log("params:", from , to, amount);
         InterfaceERC20Token(_ierc20).transferFrom(from, to, amount);
     }
 
