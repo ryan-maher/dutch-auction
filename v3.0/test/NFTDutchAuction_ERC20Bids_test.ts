@@ -83,12 +83,13 @@ describe("Tests:", function() {
         expect(await ERC20Contract.balanceOf(account3.address)).to.equal(2000);
 
         // Log addresses
-        console.log("account0 address: ", account0.address);
-        console.log("account1 address: ", account1.address);
-        console.log("account2 address: ", account2.address);
-        console.log("account3 address: ", account3.address);
-        console.log("ERC20 contract address: ", ERC20Contract.address);
-        console.log("Auction contract address: ", NFTDutchAuction.address);
+        // console.log("account0 address: ", account0.address);
+        // console.log("account1 address: ", account1.address);
+        // console.log("account2 address: ", account2.address);
+        // console.log("account3 address: ", account3.address);
+        // console.log("ERC20 contract address: ", ERC20Contract.address);
+        // console.log("Auction contract address: ", NFTDutchAuction.address);
+        // console.log("\n");
         
         var approvalAmount = 20000;
 
@@ -99,25 +100,26 @@ describe("Tests:", function() {
         await ERC20Contract.connect(account1).approve(account2.address, 20000);
         await ERC20Contract.connect(account1).approve(account0.address, 20000);
         
-        // the key
-        await ERC20Contract.connect(account3).approve(NFTDutchAuction.address, 20000);
+        const bidAmount = 1500;
+        
+        // account3 approves the Auction contract to call transferFrom and spend account3's tokens on its behalf to receive the bid amount
+        await ERC20Contract.connect(account3).approve(NFTDutchAuction.address, bidAmount);
 
         // Log Allowances
-        console.log("\naccount1 -> account0 allowance: ", (await ERC20Contract.allowance(account1.address, account0.address)).toNumber());
-        console.log("account1 -> itself allowance: ", (await ERC20Contract.allowance(account1.address, account1.address)).toNumber());
-        console.log("account1 -> account2 allowance: ", (await ERC20Contract.allowance(account1.address, account2.address)).toNumber());
-        console.log("account1 -> account3 allowance: ", (await ERC20Contract.allowance(account1.address, account3.address)).toNumber());
-        console.log("account1 -> ERC20 contract ", (await ERC20Contract.allowance(account1.address, ERC20Contract.address)).toNumber());
-        console.log("account1 -> Auction contract ", (await ERC20Contract.allowance(account1.address, NFTDutchAuction.address)).toNumber());
+        // console.log("\naccount1 -> account0 allowance: ", (await ERC20Contract.allowance(account1.address, account0.address)).toNumber());
+        // console.log("account1 -> itself allowance: ", (await ERC20Contract.allowance(account1.address, account1.address)).toNumber());
+        // console.log("account1 -> account2 allowance: ", (await ERC20Contract.allowance(account1.address, account2.address)).toNumber());
+        // console.log("account1 -> account3 allowance: ", (await ERC20Contract.allowance(account1.address, account3.address)).toNumber());
+        // console.log("account1 -> ERC20 contract ", (await ERC20Contract.allowance(account1.address, ERC20Contract.address)).toNumber());
+        // console.log("account1 -> Auction contract ", (await ERC20Contract.allowance(account1.address, NFTDutchAuction.address)).toNumber());
         
         // Place bid
         // bidder is account3
-        const bidAmount = 1500;
         expect(await NFTDutchAuction.connect(account3).bid(bidAmount));
 
         // Log balances
-        console.log("account3 token balance: ", await ERC20Contract.balanceOf(account3.address));
-        console.log("account2 token balance: ", await ERC20Contract.balanceOf(account2.address));
+        // console.log("account3 token balance: ", await ERC20Contract.balanceOf(account3.address));
+        // console.log("account2 token balance: ", await ERC20Contract.balanceOf(account2.address));
 
         // Check bidder and owner token balances
         expect((await ERC20Contract.balanceOf(account3.address)).toNumber()).to.equal(500);
@@ -129,7 +131,6 @@ describe("Tests:", function() {
 
     });
     
-    /*
     describe("ERC20 Token:", function() {
 
         it("ERC20 Tokens can be transferred", async function () {
@@ -197,6 +198,5 @@ describe("Tests:", function() {
         });
 
     });
-    */
 
 });

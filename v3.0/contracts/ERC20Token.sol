@@ -11,12 +11,9 @@ import "hardhat/console.sol";
 contract ERC20Token is ERC20{
     
     constructor(uint256 initialSupply) ERC20("AuctionToken", "ANFT"){
-        console.log("initial supply is: ", initialSupply);
+        // console.log("initial supply is: ", initialSupply);
         _mint(msg.sender, initialSupply);
         approve(msg.sender, initialSupply);
     }
-    
-    // Override to get bool
-    function transferFrom(address from, address to, uint256 amount) public override returns (bool){}
 
 }
