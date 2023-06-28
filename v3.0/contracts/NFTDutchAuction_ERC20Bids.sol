@@ -81,6 +81,7 @@ contract NFTDutchAuction_ERC20Bids{
         (bool success) = ERC20transferFrom(tokenAddress, msg.sender, owner, amount);
         
         // transferFrom is not returning true even when tokens have been transferred successfully
+        // could be an issue with interface/override
         // console.log("success: ", success);
         // require(success, "transfer failed");
     

@@ -2,9 +2,11 @@ import { expect } from "chai";
 import { time, loadFixture, mine} from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
 import { erc20 } from "../typechain-types/@openzeppelin/contracts/token";
+import { deploy } from "@openzeppelin/hardhat-upgrades/dist/utils";
 
 describe("Tests:", function() {
 
+    // Deployed by account0
     async function deployNFTContract(){
 
         // Get and Deploy contract
@@ -14,11 +16,12 @@ describe("Tests:", function() {
         
         // console.log("NFT contract deployed by: ", await NFTContract.signer.getAddress());
         // console.log("NFT contract deployed to: ", NFTContract.address);
-
+        
         return {NFTContract};
 
     }
 
+    // Deployed by account0
     async function deployERC20Contract(){
 
         // Get signers
@@ -37,8 +40,55 @@ describe("Tests:", function() {
         return {ERC20Contract, initialSupply};
 
     }
+
+    async function deployContractsAndMint(){
+
+        // Load NFT contract deployment fixture
+        const {NFTContract} = await loadFixture(deployNFTContract);
+        
+        // Mint NFT to account1
+        const tokenid = 10;
+        const [account0, account1] = await ethers.getSigners();
+        const mint = (await NFTContract.safeMint(account0.address, tokenid));
+
+        // Load ERC20 contract deployment fixture
+        const {ERC20Contract, initialSupply} = await loadFixture(deployERC20Contract);
+
+        // Deploy Auction contract
+        const DutchAuction = await ethers.getContractFactory("NFTDutchAuction_ERC20Bids");
+        const NFTDutchAuction = await DutchAuction.deploy(ERC20Contract.address, NFTContract.address, tokenid, 1000, 20, 10);
+        
+        return {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply};
+
+    }
+
+    async function deployContractsAndMintLate(){
+
+        // Get and Deploy contract
+        const NFT = await ethers.getContractFactory("NFT");
+
+        await mine(10);
+
+        const NFTContract = await NFT.deploy(); 
+        await NFTContract.deployed();
+
+        // Mint NFT to account1
+        const tokenid = 10;
+        const [account0, account1] = await ethers.getSigners();
+        const mint = (await NFTContract.safeMint(account0.address, tokenid));
+
+        // Load ERC20 contract deployment fixture
+        const {ERC20Contract, initialSupply} = await loadFixture(deployERC20Contract);
+
+        // Deploy Auction contract
+        const DutchAuction = await ethers.getContractFactory("NFTDutchAuction_ERC20Bids");
+        const NFTDutchAuction = await DutchAuction.deploy(ERC20Contract.address, NFTContract.address, tokenid, 1000, 20, 10);
+        
+        return {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply};
+
+    }
     
-    it("Deployment, Minting, and Transfer", async function () {
+    it("Deployment, Minting, and Transfer Succeed", async function () {
 
         // Load NFT contract deployment fixture
         const {NFTContract} = await loadFixture(deployNFTContract);
@@ -130,10 +180,178 @@ describe("Tests:", function() {
         expect((await NFTContract.balanceOf(account3.address)).toNumber()).to.equal(1);
 
     });
-    
-    describe("ERC20 Token:", function() {
 
-        it("ERC20 Tokens can be transferred", async function () {
+    describe("Contracts", function() {
+
+        it("Dutch Auction contract sets correct initial price", async function () {
+    
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            const price = 1200;
+
+            // Get initialPrice from contract
+            var initPrice = (await NFTDutchAuction.initialPrice()).toNumber();
+
+            // Compare initialPrice with expected price
+            expect(initPrice).to.equal(price);
+
+        });
+
+        it("Dutch Auction contract accepts valid bid", async function () {
+    
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting address of signers to use an account different than owner to place bid
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1500;
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+            
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Bidder account places bid
+            expect(await NFTDutchAuction.connect(account2).bid(bidAmount));
+
+        });
+
+        it("Dutch Auction contract reverts bid below current price", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting address of signers to use an account different than owner to place bid
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1000;
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+            
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Bidder account places bid
+            await expect(NFTDutchAuction.connect(account2).bid(bidAmount)).to.be.reverted;
+            
+        });
+
+        it("Dutch Auction contract reverts bid after valid bid already placed", async function () {
+    
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting address of signers to use an account different than owner to place bid
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1500;
+
+            // Transfer tokens to bidder accounts
+            await ERC20Contract.transfer(account1.address, bidAmount);
+            await ERC20Contract.transfer(account2.address, bidAmount);
+            
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Bidder account places bid
+            expect(await NFTDutchAuction.connect(account2).bid(bidAmount));
+
+            // Different bidder bids after valid bid already placed
+            await expect(NFTDutchAuction.connect(account1).bid(bidAmount)).to.be.reverted;
+            
+        });
+
+        // Cannot test ERC20 transfer require because transferFrom is not returning true on success
+
+        // it("Dutch Auction contract reverts bid if ether transfer to the owner fails (.call fails)", async function () {
+
+        //     // NFT contract and ERC20 contract owner: account0
+        //     // Dutch Auction contract owner: test contract address
+            
+        //     const [account0, account1, account2] = await ethers.getSigners();
+
+        //     const bigNum = BigInt("6000000000000000000");
+        //     const tokenid = 32;
+            
+        //     // Loading fixtures
+        //     const {NFTContract} = await loadFixture(deployNFTContract);
+        //     const {ERC20Contract} = await loadFixture(deployERC20Contract);
+            
+        //     // Deploy auction contract through intermediary
+        //     const testHelperFactory = await ethers.getContractFactory('test');
+        //     const testHelper = await testHelperFactory.deploy(ERC20Contract.address, NFTContract.address, tokenid, 1000, 20, 10);
+        //     await testHelper.deployed();
+
+        //     // Check if transaction reverts
+        //     await expect(testHelper.connect(account1).targetTest({value: bigNum})).to.be.revertedWith("transfer failed");
+            
+        //     // Check if NFT was not transferred
+        //     expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
+
+        // });
+
+        it("NFT contract rejects approve call from unapproved/non-owner account", async function () {
+    
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+            
+            const [owner, account1] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            expect (NFTContract.connect(account1).approve(NFTDutchAuction.address, tokenid)).to.be.rejected;
+            
+        });
+
+        it("NFT contract rejects mint call from unapproved/non-owner account", async function () {
+
+            // NFT contract owner: account0
+            
+            // Loading fixture
+            const {NFTContract} = await loadFixture(deployNFTContract);
+
+            // Get signers
+            const [account0, account1] = await ethers.getSigners();
+
+            const tokenid = 5;
+            
+            // Only the deployer of NFT contract can call safeMint
+            await expect(NFTContract.connect(account1).safeMint(account1.address, tokenid)).to.be.rejected;
+
+        });
+
+        it("ERC20 Tokens can be transferred between accounts", async function () {
 
             // Load ERC20 Token contract deployment fixture
             const {ERC20Contract, initialSupply} = await loadFixture(deployERC20Contract);
@@ -195,6 +413,239 @@ describe("Tests:", function() {
             expect((await ERC20Contract.balanceOf(account2.address)).toNumber()).to.equal(0);
             expect((await ERC20Contract.balanceOf(account3.address)).toNumber()).to.equal(0);
             
+        });
+        
+        it("ERC20 contract rejects approve call from unapproved/non-owner account", async function () {
+    
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+            
+            const [owner, account1] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            expect (ERC20Contract.connect(account1).approve(NFTDutchAuction.address, tokenid)).to.be.rejected;
+            
+        });
+
+    });
+    
+    describe("Block Timing", function() {
+
+        it("Auction begins at the block in which the contract is created", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account1
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Get current block number
+            var blockNumber = await time.latestBlock();
+
+            // Get contract starting block number
+            var contractBlock = (await (NFTDutchAuction.startingBlock())).toNumber();
+
+            // Compare current block number to starting block of contract
+            expect(contractBlock).to.equal(blockNumber);
+
+        });
+
+        it("Contract accepts bid of lower but sufficient value after some time has passed", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account1
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting addresses of signers
+            const [account0, account1, account2] = await ethers.getSigners();
+            
+            await mine(10);
+            
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1200;
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Check if bid of lower but sufficient value succeeds after a few blocks have been mined
+            expect(await NFTDutchAuction.connect(account2).bid(bidAmount));
+
+        });
+
+        it("Contract accepts valid bid at last block of auction", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account1
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Mines less blocks than _numBlocksAuctionOpen (set to 20 for these tests)
+            await mine(15);
+
+            const bidAmount = 1000;
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            // Getting addresses of signers
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Check if bid of lower but sufficient value succeeds after a few blocks have been mined
+            expect(await NFTDutchAuction.connect(account2).bid(bidAmount));
+
+        });
+
+        it("Bid fails when auction block window has ended", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account1
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Mines less blocks than _numBlocksAuctionOpen (set to 20 for these tests)
+            await mine(16);
+
+            const bidAmount = 1000;
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+
+            // Getting addresses of signers
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Check if bid of lower but sufficient value succeeds after a few blocks have been mined
+            await expect(NFTDutchAuction.connect(account2).bid(bidAmount)).to.be.revertedWith("Auction closed");
+
+        });
+
+    });
+
+    describe("Owner", function() {
+
+        it("Owner of the contract should be the seller of the NFT", async function () {
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting signers of contract
+            const [account0, account1] = await ethers.getSigners();
+            
+            // Checks if owner and signer match
+            expect(await NFTDutchAuction.owner()).to.equal(account0.address);
+
+            // Checks if owner has NFT
+            expect((await NFTContract.balanceOf(account0.address)).toNumber()).to.equal(1);
+
+        });
+
+        it("Seller receives ERC20 tokens from first valid bid", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account1
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting addresses of signers to use an account different than owner to place bid
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1500;
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+            
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+            
+            var ownerInitialBalance = (await ERC20Contract.balanceOf(account0.address)).toNumber();
+
+            // Bidder account places bid
+            await NFTDutchAuction.connect(account2).bid(bidAmount);
+
+            var ownerFinalBalance = ((await ERC20Contract.balanceOf(account0.address)).toNumber());
+
+            var ownerBalanceDifference = ownerFinalBalance - ownerInitialBalance;
+
+            // Check if owner received tokens
+            expect(ownerBalanceDifference).to.equal(bidAmount);
+
+        });
+
+        it("Winning bidder receives NFT", async function () {
+
+            // NFT contract, ERC20 contract, and Auction contract owner: account0
+            // NFT minted to: account0
+            // 50000 ERC tokens at account0
+            
+            // Loading fixture
+            const {NFTContract, NFTDutchAuction, ERC20Contract, tokenid, initialSupply} = await loadFixture(deployContractsAndMint);
+
+            // Getting address of signers to use an account different than owner to place bid
+            const [account0, account1, account2] = await ethers.getSigners();
+
+            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            const app = await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
+
+            const bidAmount = 1500;
+
+            // Transfer tokens to bidder account
+            await ERC20Contract.transfer(account2.address, bidAmount);
+            
+            // Approve tokens to be spent
+            await ERC20Contract.connect(account0).approve(account2.address, bidAmount);
+            await ERC20Contract.connect(account2).approve(NFTDutchAuction.address, bidAmount);
+
+            // Check NFT balances
+            expect((await NFTContract.balanceOf(account0.address)).toNumber()).to.equal(1);
+            expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
+            expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(0);
+
+            // Bidder account places bid
+            await NFTDutchAuction.connect(account2).bid(bidAmount);
+
+            // Check if bidder received NFT
+            expect((await NFTContract.balanceOf(account0.address)).toNumber()).to.equal(0);
+            expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
+            expect((await NFTContract.balanceOf(account2.address)).toNumber()).to.equal(1);
+            
+
         });
 
     });
