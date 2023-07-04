@@ -18,7 +18,7 @@ contract ERC20Token is ERC20, ERC20Permit{
     constructor(uint256 initialSupply) ERC20("AuctionToken", "AT") ERC20Permit("AuctionToken") {
 
         _mint(msg.sender, initialSupply);
-        // approve(msg.sender, initialSupply);
+        approve(msg.sender, initialSupply);
 
     }
 

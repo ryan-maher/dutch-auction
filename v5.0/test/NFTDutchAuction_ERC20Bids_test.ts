@@ -7,7 +7,6 @@ import { ERC20Token } from "../typechain-types";
 
 describe("Tests:", function() {
 
-    // Deployed by account0
     async function deployNFTContract(){
 
         // Get and Deploy contract
@@ -22,7 +21,6 @@ describe("Tests:", function() {
 
     }
 
-    // Deployed by account0
     async function deployERC20Contract(){
 
         const initialSupply = 50000;
@@ -61,6 +59,7 @@ describe("Tests:", function() {
     }
 
     // Function from Smart Contract Programmer https://www.youtube.com/watch?v=Sib9_yW_rLY
+    // Used for getting v, r, and s parameters for ERC20 permit function
     async function getPermitSignature(signer: SignerWithAddress, token: ERC20Token, spender: string, value: number, deadline: BigNumber) {
         const [nonce, name, version, chainId] = await Promise.all([
           token.nonces(signer.address),
@@ -197,7 +196,7 @@ describe("Tests:", function() {
                 // Deploying contracts
                 const {NFTDutchAuction, NFTContract, ERC20Contract, initialSupply, tokenid} = await loadFixture(deployAuctionProxy);
     
-                // Getting addresses of signers to use an account different than owner to place bid
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
     
                 // Dutch auction contract address needs to be approved because it calls safeTransferFrom
@@ -222,7 +221,6 @@ describe("Tests:", function() {
                 await NFTDutchAuction.connect(account2).bid(bidAmount);
     
                 var ownerFinalBalance = ((await ERC20Contract.balanceOf(account0.address)).toNumber());
-    
                 var ownerBalanceDifference = ownerFinalBalance - ownerInitialBalance;
     
                 // Check if owner received tokens
@@ -239,7 +237,7 @@ describe("Tests:", function() {
                 // Deploying contracts
                 const {NFTDutchAuction, NFTContract, ERC20Contract, initialSupply, tokenid} = await loadFixture(deployAuctionProxy);
     
-                // Getting address of signers to use an account different than owner to place bid
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
     
                 // Dutch auction contract address needs to be approved because it calls safeTransferFrom
@@ -302,8 +300,8 @@ describe("Tests:", function() {
                 // Dutch auction contract address needs to be approved because it calls safeTransferFrom
                 await NFTContract.connect(account0).approve(NFTDutchAuction.address, tokenid);
 
-                // Bidder account places bid
-                await expect (NFTDutchAuction.connect(account1).bid(bidAmount)).to.be.reverted;
+                // Check if invalid bid reverts
+                await expect(NFTDutchAuction.connect(account1).bid(bidAmount)).to.be.reverted;
                 
             });
 
@@ -380,7 +378,7 @@ describe("Tests:", function() {
                 // Deploying contracts
                 const {NFTDutchAuction, NFTContract, ERC20Contract, initialSupply, tokenid} = await loadFixture(deployAuctionProxy);
     
-                // Getting addresses of signers
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
                 
                 await mine(10);
@@ -437,7 +435,7 @@ describe("Tests:", function() {
                 const {v, r, s} = await getPermitSignature(account2, ERC20Contract, NFTDutchAuction.address, bidAmount, deadline);
                 await ERC20Contract.permit(account2.address, NFTDutchAuction.address, bidAmount, deadline, v, r, s);
     
-                // Check if bid of lower but sufficient value succeeds after a few blocks have been mined
+                // Check if bid succeeds
                 expect(await NFTDutchAuction.connect(account2).bid(bidAmount));
     
             });
@@ -458,7 +456,7 @@ describe("Tests:", function() {
                 // Dutch auction contract address needs to be approved because it calls safeTransferFrom
                 const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
     
-                // Getting addresses of signers
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
     
                 // Transfer tokens to bidder account
@@ -471,7 +469,8 @@ describe("Tests:", function() {
                 const deadline = ethers.constants.MaxUint256;
                 const {v, r, s} = await getPermitSignature(account2, ERC20Contract, NFTDutchAuction.address, bidAmount, deadline);
                 await ERC20Contract.permit(account2.address, NFTDutchAuction.address, bidAmount, deadline, v, r, s);
-    
+                
+                // Check if invalid bid fails
                 await expect(NFTDutchAuction.connect(account2).bid(bidAmount)).to.be.revertedWith("Auction closed");
     
             });
@@ -485,10 +484,12 @@ describe("Tests:", function() {
                 // Deploying contracts
                 const {NFTDutchAuction, NFTContract, ERC20Contract, initialSupply, tokenid} = await loadFixture(deployAuctionProxy);
                 
-                // Getting addresses of signers
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
 
                 const DutchActionNew = await ethers.getContractFactory("NewDutchAuction");
+
+                // Check if proxy upgrade succeeds
                 expect(await upgrades.upgradeProxy(NFTDutchAuction.address, DutchActionNew, {kind: "uups"}));
 
             });
@@ -499,31 +500,39 @@ describe("Tests:", function() {
                 const test = await upgrades.deployProxy(testContract);
                 await test.deployed();
                 
-                // Getting addresses of signers
+                // Getting signers
                 const [account0, account1, account2] = await ethers.getSigners();
 
                 const DutchAction = await ethers.getContractFactory("NFTDutchAuction_ERC20Bids");
+
+                // Check if proxy upgrade succeeds
                 expect(await upgrades.upgradeProxy(test.address, DutchAction, {kind: "uups"}));
 
             });
 
             it("Cannot be upgraded by non-owner", async function() {
 
-                // Get signers
+                // Getting signers
                 const [account0, account1] = await ethers.getSigners();
                 
+                // Load NFT and ERC20 contract fixtures
                 const {NFTContract} = await loadFixture(deployNFTContract);
                 const {ERC20Contract, initialSupply} = await loadFixture(deployERC20Contract);
 
                 const tokenid = 5;
+
+                // Mint NFT to account0
                 await NFTContract.safeMint(account0.address, tokenid);
                 
+                // Deploy auction proxy
                 const auction = await ethers.getContractFactory("NFTDutchAuction_ERC20Bids", account1);
                 const NFTDutchAuction = await upgrades.deployProxy(auction, [ERC20Contract.address, NFTContract.address, tokenid, 1000, 20, 10]);
                 
                 await NFTDutchAuction.deployed();
 
                 const DutchActionNew = await ethers.getContractFactory("NewDutchAuction");
+
+                // Check if upgrade from non-owner fails
                 await expect(upgrades.upgradeProxy(NFTDutchAuction.address, DutchActionNew, {kind: "uups"})).to.be.reverted;
 
             });
@@ -543,13 +552,17 @@ describe("Tests:", function() {
             // Deploying contracts
             const {NFTDutchAuction, NFTContract, ERC20Contract, initialSupply, tokenid} = await loadFixture(deployAuctionProxy);
             
+            // Getting signers
             const [account0, account1] = await ethers.getSigners();
 
+            // Check NFT balances
             expect((await NFTContract.balanceOf(account0.address)).toNumber()).to.equal(1);
             expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(0);
 
+            // Check if transferFrom succeeds
             expect(await NFTContract.connect(account0).transferFrom(account0.address, account1.address, tokenid));
 
+            // Check NFT balances
             expect((await NFTContract.balanceOf(account0.address)).toNumber()).to.equal(0);
             expect((await NFTContract.balanceOf(account1.address)).toNumber()).to.equal(1);
 
@@ -566,7 +579,7 @@ describe("Tests:", function() {
             
             const [owner, account1] = await ethers.getSigners();
 
-            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            // Check if approval from unapproved/non-owner fails
             expect (NFTContract.connect(account1).approve(NFTDutchAuction.address, tokenid)).to.be.rejected;
             
         });
@@ -602,18 +615,50 @@ describe("Tests:", function() {
             // Get signers
             const [account0, account1, account2, account3] = await ethers.getSigners();
             
-            const deadline = ethers.constants.MaxUint256;
-
-            const bidAmount = 1500;
-
-            const {v, r, s} = await getPermitSignature(account0, ERC20Contract, NFTDutchAuction.address, bidAmount, deadline);
-
-            await ERC20Contract.permit(account0.address, NFTDutchAuction.address, bidAmount, deadline, v, r, s);
-
-            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
-            const app = await NFTContract.approve(NFTDutchAuction.address, tokenid);
+            // Log Balances
+            // console.log("account0 balance: ", (await ERC20Contract.balanceOf(account0.address)).toNumber());
+            // console.log("account1 balance: ", (await ERC20Contract.balanceOf(account1.address)).toNumber());
+            // console.log("account2 balance: ", (await ERC20Contract.balanceOf(account2.address)).toNumber());
+            // console.log("contract balance: ", (await ERC20Contract.balanceOf(ERC20Contract.address)).toNumber());
             
-            await NFTDutchAuction.connect(account0).bid(bidAmount);
+            // Log Allowances
+            // console.log("\naccount0 -> itself allowance: ", (await ERC20Contract.allowance(account0.address, account0.address)).toNumber());
+            // console.log("account0 -> account1 allowance: ", (await ERC20Contract.allowance(account0.address, account1.address)).toNumber());
+            // console.log("account0 -> account2 allowance: ", (await ERC20Contract.allowance(account0.address, account2.address)).toNumber());
+            // console.log("account0 -> contract ", (await ERC20Contract.allowance(account0.address, ERC20Contract.address)).toNumber());
+
+            // Check initial balances
+            expect((await ERC20Contract.balanceOf(account0.address)).toNumber()).to.equal(initialSupply);
+            expect((await ERC20Contract.balanceOf(account1.address)).toNumber()).to.equal(0);
+            expect((await ERC20Contract.balanceOf(account2.address)).toNumber()).to.equal(0);
+            expect((await ERC20Contract.balanceOf(account3.address)).toNumber()).to.equal(0);
+
+            // Check initial allowances
+            // expect((await ERC20Contract.allowance(account0.address, account0.address)).toNumber()).to.equal(initialSupply);
+            // expect((await ERC20Contract.allowance(account0.address, account1.address)).toNumber()).to.equal(0);
+            // expect((await ERC20Contract.allowance(account0.address, account2.address)).toNumber()).to.equal(0);
+            // expect((await ERC20Contract.allowance(account0.address, account3.address)).toNumber()).to.equal(0);
+
+            // Transfer tokens from account0 to account1
+            await ERC20Contract.transferFrom(account0.address, account1.address, 50);
+
+            // Log Balances
+            // console.log("\naccount0 balance: ", (await ERC20Contract.balanceOf(account0.address)).toNumber());
+            // console.log("account1 balance: ", (await ERC20Contract.balanceOf(account1.address)).toNumber());
+            // console.log("account2 balance: ", (await ERC20Contract.balanceOf(account2.address)).toNumber());
+            // console.log("contract balance: ", (await ERC20Contract.balanceOf(ERC20Contract.address)).toNumber());
+
+            // Log Allowances
+            // console.log("\naccount0 -> itself allowance: ", (await ERC20Contract.allowance(account0.address, account0.address)).toNumber());
+            // console.log("account0 -> account1 allowance: ", (await ERC20Contract.allowance(account0.address, account1.address)).toNumber());
+            // console.log("account0 -> account2 allowance: ", (await ERC20Contract.allowance(account0.address, account2.address)).toNumber());
+            // console.log("account0 -> contract ", (await ERC20Contract.allowance(account0.address, ERC20Contract.address)).toNumber());
+            
+            // Check balances
+            expect((await ERC20Contract.balanceOf(account0.address)).toNumber()).to.equal(initialSupply - 50);
+            expect((await ERC20Contract.balanceOf(account1.address)).toNumber()).to.equal(50);
+            expect((await ERC20Contract.balanceOf(account2.address)).toNumber()).to.equal(0);
+            expect((await ERC20Contract.balanceOf(account3.address)).toNumber()).to.equal(0);
             
         });
 
@@ -628,14 +673,11 @@ describe("Tests:", function() {
             
             const [owner, account1] = await ethers.getSigners();
 
-            // Dutch auction contract address needs to be approved because it calls safeTransferFrom
+            // Check if approve call from unapproved/non-owner account fails
             expect (ERC20Contract.connect(account1).approve(NFTDutchAuction.address, tokenid)).to.be.rejected;
             
         });
 
-
     });
 
 });
-
-    
