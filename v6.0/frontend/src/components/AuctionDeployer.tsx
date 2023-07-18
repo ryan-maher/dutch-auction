@@ -88,6 +88,7 @@ export function AuctionDeployer(): ReactElement {
   // For Bidding
   const [bidAddress, setBidAddress] = useState<string>('');
   const [bidAmount, setBidAmount] = useState<number>();
+  const [bidAccepted, setBidAccepted] = useState<string>('');
   
   useEffect((): void => {
     if (!library) {
@@ -214,7 +215,11 @@ function handleBid(event: MouseEvent<HTMLButtonElement>) {
 
       window.alert(`Bid sent to: ${dutchAuction.address}`);
 
+      setBidAccepted("Yes");
+
     } catch (error: any) {
+      
+      setBidAccepted("No");
       window.alert(
         'Error!' + (error && error.message ? `\n\n${error.message}` : '')
       );
@@ -379,6 +384,10 @@ function handleBid(event: MouseEvent<HTMLButtonElement>) {
         >Bid
         </StyledButton>
         
+        <StyledLabel id='bidAccepted'>Bid accepted?</StyledLabel>
+        <div>
+          {bidAccepted ? (bidAccepted) : (<em>{`<Place bid>`}</em>)}
+        </div>
       
       </StyledAuctionDiv>
     </>
